@@ -88,53 +88,100 @@ void ModelPhotoShoot::PerformPostRenderingOperations() {
   ignition::rendering::v6::VisualPtr vis =
       this->scene->VisualByName(this->modelName);
 
-  this->scene->SetAmbientLight(0.1, 0.1, 0.1);
-  this->scene->SetBackgroundColor(ignition::math::Color(0.8, 0.898039f, 1));
-  // this->scene->PreRender();
   ignition::rendering::VisualPtr root = this->scene->RootVisual();
 
-  // create directional light
-  ignition::rendering::DirectionalLightPtr light0 =
-      this->scene->CreateDirectionalLight();
-  light0->SetDirection(-0.5, 0.5, -1);
-  light0->SetDiffuseColor(0.8, 0.8, 0.8);
-  light0->SetSpecularColor(0.5, 0.5, 0.5);
-  root->AddChild(light0);
-
-  // create point light
-  ignition::rendering::PointLightPtr light2 = this->scene->CreatePointLight();
-  light2->SetDiffuseColor(0.5, 0.5, 0.5);
-  light2->SetSpecularColor(0.5, 0.5, 0.5);
-  light2->SetLocalPosition(3, 5, 5);
-  root->AddChild(light2);
-
   if (vis && take_picture) {
+
+    this->scene->SetAmbientLight(0.3, 0.3, 0.3);
+    this->scene->SetBackgroundColor(0.3, 0.3, 0.3);
+
+    // create directional light
+    ignition::rendering::DirectionalLightPtr light0 =
+    this->scene->CreateDirectionalLight();
+    light0->SetDirection(-0.5, 0.5, -1);
+    light0->SetDiffuseColor(0.8, 0.8, 0.8);
+    light0->SetSpecularColor(0.5, 0.5, 0.5);
+    root->AddChild(light0);
+
+    // create point light
+    ignition::rendering::PointLightPtr light2 = this->scene->CreatePointLight();
+    light2->SetDiffuseColor(0.5, 0.5, 0.5);
+    light2->SetSpecularColor(0.5, 0.5, 0.5);
+    light2->SetLocalPosition(3, 5, 5);
+    root->AddChild(light2);
+
     for (unsigned int i = 0; i < this->scene->NodeCount(); ++i) {
       auto cam = std::dynamic_pointer_cast<ignition::rendering::Camera>(
           this->scene->NodeByIndex(i));
       if (nullptr != cam) {
 
-        unsigned int width = cam->ImageWidth();
-        unsigned int height = cam->ImageHeight();
+        //Set the model pose
+        ignition::math::AxisAlignedBox bbox = vis->LocalBoundingBox();
+        ignition::rendering::WireBoxPtr wireBox = this->scene->CreateWireBox();
 
-        cam->Update();
+        double scaling = 1.0 / bbox.Size().Max();
 
-        auto cameraImage = cam->CreateImage();
-        cam->Copy(cameraImage);
+        // Compute the model translation.
+        ignition::math::Vector3d trans = bbox.Center();
+        trans *= -scaling;
 
-        auto formatStr =
-            ignition::rendering::PixelUtil::Name(cam->ImageFormat());
-        auto format = ignition::common::Image::ConvertPixelFormat(formatStr);
-        std::string name = ignition::common::systemTimeISO() + ".png";
+        // Normalize the size of the visual
+        vis->SetLocalScale(ignition::math::Vector3d(scaling, scaling, scaling));
+        vis->SetWorldPose(
+            ignition::math::Pose3d(trans.X(), trans.Y(), trans.Z(), 0, 0, 0));
 
-        ignition::common::Image image;
-        image.SetFromData(cameraImage.Data<unsigned char>(), width, height,
-                          format);
-        image.SavePNG(name);
-        igndbg << "Saved image to [" << name << "]" << std::endl;
+        ignition::math::Pose3d pose;
+
+        //Perspective view
+        pose.Pos().Set(1.6, -1.6, 1.2);
+        pose.Rot().Euler(0, IGN_DTOR(30), IGN_DTOR(-225));
+        SavePicture(cam, pose, "1");
+
+        //Top view
+        pose.Pos().Set(0, 0, 2.2);
+        pose.Rot().Euler(0, IGN_DTOR(90), 0);
+        SavePicture(cam, pose, "2");
+
+        // Front view
+        pose.Pos().Set(2.2, 0, 0);
+        pose.Rot().Euler(0, 0, IGN_DTOR(-180));
+        SavePicture(cam, pose, "3");
+
+        // Side view
+        pose.Pos().Set(0, 2.2, 0);
+        pose.Rot().Euler(0, 0, IGN_DTOR(-90));
+        SavePicture(cam, pose, "4");
+
+        // Back view
+        pose.Pos().Set(-2.2, 0, 0);
+        pose.Rot().Euler(0, 0, 0);
+        SavePicture(cam, pose, "5");
 
         take_picture = false;
       }
     }
   }
+}
+
+void ModelPhotoShoot::SavePicture(const ignition::rendering::CameraPtr cam,
+                                  const ignition::math::Pose3d pose,
+                                  const std::string name)
+{
+  unsigned int width = cam->ImageWidth();
+  unsigned int height = cam->ImageHeight();
+
+  ignition::common::Image image;
+
+  cam->SetWorldPose(pose);
+  auto cameraImage = cam->CreateImage();
+  cam->Capture(cameraImage);
+  auto formatStr =
+      ignition::rendering::PixelUtil::Name(cam->ImageFormat());
+  auto format = ignition::common::Image::ConvertPixelFormat(formatStr);
+  image.SetFromData(cameraImage.Data<unsigned char>(), width, height,
+                        format);
+  std::string fullname = name + ".png";
+  image.SavePNG(fullname);
+
+  igndbg << "Saved image to [" << fullname << "]" << std::endl;
 }

@@ -53,6 +53,8 @@ public:
                  ignition::gazebo::EntityComponentManager &_ecm,
                  const std::shared_ptr<const sdf::Element> &_sdf);
 
+  void SavePicture(const ignition::rendering::CameraPtr cam, const ignition::math::Pose3d pose,const std::string name);
+
   /// \brief Ignition publisher used to stop the server.
 private:
   ignition::transport::Node::Publisher pubIgn;
