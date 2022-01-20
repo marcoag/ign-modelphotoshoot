@@ -26,13 +26,31 @@ void ModelPhotoShoot::Configure(const ignition::gazebo::Entity &_entity,
                                 ignition::gazebo::EntityComponentManager &_ecm,
                                 ignition::gazebo::EventManager &_eventMgr) {
 
+  //Configuration values
+  std::string model_location = _sdf->Get<std::string>("model_uri");
+  if (model_location.empty()) {
+    ignerr << "Please specify the model location through the <model_location>"
+        "tag in the sdf file.\n";
+    return;
+  }
+  std::string save_data_location = _sdf->Get<std::string>("translation_data_file");
+  if (save_data_location.empty()) {
+    igndbg << "No data location specified, skipping translaiton data"
+        "saving.\n";
+  }
+  else {
+    igndbg << "Saving translation data to: " << save_data_location << std::endl;
+    this->savingFile.open(save_data_location);
+  }
+
   this->connection = _eventMgr.Connect<ignition::gazebo::events::PostRender>(
       std::bind(&ModelPhotoShoot::PerformPostRenderingOperations, this));
 
-  this->LoadModel(_entity, _ecm, _sdf);
+  this->LoadModel(model_location, _entity, _ecm, _sdf);
 }
 
 void ModelPhotoShoot::LoadModel(
+    const std::string model_location,
     const ignition::gazebo::Entity &_entity,
     ignition::gazebo::EntityComponentManager &_ecm,
     const std::shared_ptr<const sdf::Element> &_sdf) {
@@ -40,8 +58,6 @@ void ModelPhotoShoot::LoadModel(
   this->worldName = this->world->Name(_ecm);
 
   this->sdf.reset(new sdf::SDF());
-
-  std::string model_location = _sdf->Get<std::string>("model_uri");
 
   if (!sdf::init(this->sdf)) {
     ignerr << "ERROR: SDF parsing the xml failed\n";
@@ -124,6 +140,9 @@ void ModelPhotoShoot::PerformPostRenderingOperations() {
         // Compute the model translation.
         ignition::math::Vector3d trans = bbox.Center();
         trans *= -scaling;
+
+        if (savingFile.is_open())
+          savingFile << "Translation: " << trans << std::endl;
 
         // Normalize the size of the visual
         vis->SetLocalScale(ignition::math::Vector3d(scaling, scaling, scaling));

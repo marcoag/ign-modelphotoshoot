@@ -20,7 +20,8 @@
     <plugin
       filename="ModelPhotoShoot"
       name="model_photo_shoot::ModelPhotoShoot">
-      <model_uri>/home/marcogg/ModelPhotoShoot/build/ur5_rg2/model.sdf</model_uri>
+      <model_uri>/home/marcogg/ignition-tests/photo_shoot/build/nao/model.sdf</model_uri>
+      <translation_data_file>/home/marcogg/ignition-tests/temporal/poses.txt</translation_data_file>
     </plugin>
     <model name="camera_model">
       <pose>2.2 0 0 0 0 -3.14</pose>

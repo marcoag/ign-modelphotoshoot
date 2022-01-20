@@ -49,7 +49,8 @@ public:
 
   void PerformPostRenderingOperations();
 
-  void LoadModel(const ignition::gazebo::Entity &_entity,
+  void LoadModel(const std::string model_location,
+                 const ignition::gazebo::Entity &_entity,
                  ignition::gazebo::EntityComponentManager &_ecm,
                  const std::shared_ptr<const sdf::Element> &_sdf);
 
@@ -104,6 +105,11 @@ private:
   /// \brief Boolean to control we only take the picture once
 private:
   bool take_picture;
+
+  /// \brief File to save translation data
+private:
+  std::ofstream savingFile;
+
 };
 } // namespace model_photo_shoot
 //! [header]
